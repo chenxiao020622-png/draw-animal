@@ -25,6 +25,9 @@
         .color-btn.active { border-color: #f39c12; box-shadow: 0 0 0 3px #f39c12; }
         button { padding: 12px 24px; font-size: 1em; background: #27ae60; color: white; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 10px rgba(39,174,96,0.3); transition: all 0.3s; }
         button:hover { background: #1e8449; transform: translateY(-2px); }
+        #type-selection { margin: 15px auto; max-width: 800px; text-align: center; }
+        #type-selection p { margin-bottom: 8px; color: #2c3e50; }
+        #animal-type { padding: 8px 16px; font-size: 16px; border-radius: 8px; border: 2px solid #ddd; }
         .footer { margin-top: 30px; color: #7f8c8d; font-size: 0.9em; }
         .footer a { color: #3498db; text-decoration: none; }
     </style>
@@ -46,8 +49,19 @@
             <button class="color-btn" style="background:#9b59b6;" title="紫"></button>
         </div>
         <button id="clear">清除画布</button>
-        <button id="share">加入乐园！</button>
     </div>
+
+    <div id="type-selection">
+        <p>选择你的动物类型：</p>
+        <select id="animal-type">
+            <option value="land">陆地动物</option>
+            <option value="bird">飞鸟</option>
+            <option value="aquatic">水族动物</option>
+            <option value="insect">昆虫</option>
+        </select>
+    </div>
+
+    <button id="share" style="margin:20px auto; display:block;">加入乐园！</button>
 
     <div class="footer">
         <a href="gallery.html" target="_blank">查看全球动物乐园</a>
@@ -134,13 +148,15 @@
         });
 
         document.getElementById('share').addEventListener('click', () => {
+            const type = document.getElementById('animal-type').value;
             const dataUrl = canvas.toDataURL('image/png');
             animalsRef.push({
                 image: dataUrl,
+                type: type,
                 timestamp: Date.now(),
                 id: Date.now() + Math.random()
             }).then(() => {
-                alert('成功！你的动物已经加入全球乐园！');
+                alert('成功！你的动物已加入生态乐园！');
                 window.open('gallery.html', '_blank');
             }).catch(err => {
                 alert('上传失败，请检查网络后重试');
