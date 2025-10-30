@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>画一只动物 | Draw Animal</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: linear-gradient(to bottom, #a8e6cf, #dcedc1);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        h1 { color: #2c3e50; margin: 10px 0 5px; font-size: 2.2em; }
+        p.subtitle { color: #555; font-size: 1.1em; margin-bottom: 15px; }
+        #canvas {
+            border: 3px solid #fff; border-radius: 15px; box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+            background: #fff; max-width: 100%; height: auto; cursor: crosshair; touch-action: none;
+        }
+        #tools { margin: 20px auto; max-width: 800px; display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 12px; }
+        .color-btn { width: 40px; height: 40px; border: 3px solid #fff; border-radius: 50%; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); transition: transform 0.2s; }
+        .color-btn:hover { transform: scale(1.15); }
+        .color-btn.active { border-color: #f39c12; box-shadow: 0 0 0 3px #f39c12; }
+        button { padding: 12px 24px; font-size: 1em; background: #27ae60; color: white; border: none; border-radius: 50px; cursor: pointer; box-shadow: 0 4px 10px rgba(39,174,96,0.3); transition: all 0.3s; }
+        button:hover { background: #1e8449; transform: translateY(-2px); }
+        .footer { margin-top: 30px; color: #7f8c8d; font-size: 0.9em; }
+        .footer a { color: #3498db; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+    <h1>Draw Animal</h1>
+    <p class="subtitle">画一只你喜欢的动物，加入全球乐园！</p>
+
+    <canvas id="canvas" width="800" height="600"></canvas>
+
+    <div id="tools">
+        <div id="colors">
+            <button class="color-btn active" style="background:#2c3e50;" title="黑"></button>
+            <button class="color-btn" style="background:#e74c3c;" title="红"></button>
+            <button class="color-btn" style="background:#3498db;" title="蓝"></button>
+            <button class="color-btn" style="background:#f39c12;" title="橙"></button>
+            <button class="color-btn" style="background:#27ae60;" title="绿"></button>
+            <button class="color-btn" style="background:#9b59b6;" title="紫"></button>
+        </div>
+        <button id="clear">清除画布</button>
+        <button id="share">加入乐园！</button>
+    </div>
+
+    <div class="footer">
+        <a href="gallery.html" target="_blank">查看全球动物乐园</a>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+    <script>
+        const firebaseConfig = {
+          apiKey: "AIzaSyBQcpM36FHCAsoCJuKx3V9Vy_u6u-F_oDw",
+          authDomain: "draw-a-person-e9191.firebaseapp.com",
+          databaseURL: "https://draw-a-person-e9191-default-rtdb.asia-southeast1.firebasedatabase.app",
+          projectId: "draw-a-person-e9191",
+          storageBucket: "draw-a-person-e9191.firebasestorage.app",
+          messagingSenderId: "1051515571241",
+          appId: "1:1051515571241:web:5df90556b7e7d8b2c82038"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+        const animalsRef = db.ref('animals');
+
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+        let currentColor = '#2c3e50';
+        const lineWidth = 3;
+
+        function resizeCanvas() {
+            const containerWidth = canvas.parentNode.clientWidth;
+            if (containerWidth < 800) {
+                canvas.width = containerWidth * 0.9;
+                canvas.height = canvas.width * 0.75;
+            }
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        function startDrawing(e) {
+            isDrawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        }
+
+        function draw(e) {
+            if (!isDrawing) return;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.clientX || e.touches[0].clientX) - rect.left;
+            const y = (e.clientY || e.touches[0].clientY) - rect.top;
+            ctx.lineTo(x, y);
+            ctx.strokeStyle = currentColor;
+            ctx.lineWidth = lineWidth;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+        }
+
+        function stopDrawing() { isDrawing = false; }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('mouseout', stopDrawing);
+        canvas.addEventListener('touchstart', startDrawing);
+        canvas.addEventListener('touchmove', draw);
+        canvas.addEventListener('touchend', stopDrawing);
+
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelector('.color-btn.active')?.classList.remove('active');
+                btn.classList.add('active');
+                currentColor = btn.style.background;
+            });
+        });
+
+        document.getElementById('clear').addEventListener('click', () => {
+            if (confirm('确定要清除画布吗？')) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        });
+
+        document.getElementById('share').addEventListener('click', () => {
+            const dataUrl = canvas.toDataURL('image/png');
+            animalsRef.push({
+                image: dataUrl,
+                timestamp: Date.now(),
+                id: Date.now() + Math.random()
+            }).then(() => {
+                alert('成功！你的动物已经加入全球乐园！');
+                window.open('gallery.html', '_blank');
+            }).catch(err => {
+                alert('上传失败，请检查网络后重试');
+                console.error(err);
+            });
+        });
+    </script>
+</body>
+</html>

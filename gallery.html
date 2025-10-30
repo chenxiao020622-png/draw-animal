@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>全球动物乐园 | Draw Animal</title>
+    <style>
+        body { margin:0; overflow:hidden; font-family: sans-serif; }
+        canvas { display:block; }
+        #info {
+            position: absolute; top: 20px; left: 20px; color: white;
+            background: rgba(0,0,0,0.5); padding: 10px; border-radius: 10px; font-size: 14px;
+        }
+        #draw-btn {
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            padding: 12px 30px; background: #27ae60; color: white; border: none;
+            border-radius: 50px; font-size: 18px; cursor: pointer; box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+        #draw-btn:hover { background: #1e8449; }
+    </style>
+</head>
+<body>
+
+<canvas id="canvas"></canvas>
+<div id="info">动物数量: <span id="count">0</span></div>
+<button id="draw-btn" onclick="location.href='draw-animal.html'">我也来画一只！</button>
+
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+
+<script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyBQcpM36FHCAsoCJuKx3V9Vy_u6u-F_oDw",
+      authDomain: "draw-a-person-e9191.firebaseapp.com",
+      databaseURL: "https://draw-a-person-e9191-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "draw-a-person-e9191",
+      storageBucket: "draw-a-person-e9191.firebasestorage.app",
+      messagingSenderId: "1051515571241",
+      appId: "1:1051515571241:web:5df90556b7e7d8b2c82038"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const animalsRef = db.ref('animals').limitToLast(50);
+
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+    resize();
+    window.addEventListener('resize', resize);
+
+    function drawBackground() {
+        const grad = ctx.createLinearGradient(0, 0, 0, height);
+        grad.addColorStop(0, '#87CEEB');
+        grad.addColorStop(1, '#98D8C8');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, width, height);
+
+        ctx.fillStyle = '#7CB342';
+        ctx.fillRect(0, height * 0.6, width, height * 0.4);
+
+        ctx.fillStyle = '#2E7D32';
+        for (let i = 0; i < 20; i++) {
+            const x = Math.random() * width;
+            const h = 100 + Math.random() * 150;
+            ctx.fillRect(x, height * 0.6 - h, 80, h);
+        }
+
+        ctx.fillStyle = '#000';
+        ctx.font = '20px serif';
+        for (let i = 0; i < 5; i++) {
+            ctx.fillText('Eagle', Math.random() * width, Math.random() * height * 0.3);
+        }
+    }
+
+    class Animal {
+        constructor(data) {
+            this.id = data.id;
+            this.img = new Image();
+            this.img.src = data.image;
+            this.x = Math.random() * (width - 200) + 100;
+            this.y = height * 0.7 + Math.random() * (height * 0.2);
+            this.size = 80 + Math.random() * 80;
+            this.targetX = this.x;
+            this.targetY = this.y;
+            this.moving = false;
+            this.nextMoveTime = Date.now() + Math.random() * 10000 + 5000;
+            this.walkCycle = 0;
+        }
+        update() {
+            const now = Date.now();
+            if (!this.moving && now > this.nextMoveTime) {
+                this.targetX = Math.random() * (width - 200) + 100;
+                this.targetY = height * 0.7 + Math.random() * (height * 0.2);
+                this.moving = true;
+                this.nextMoveTime = now + Math.random() * 15000 + 10000;
+            }
+            if (this.moving) {
+                const dx = this.targetX - this.x;
+                const dy = this.targetY - this.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+                if (dist > 1) {
+                    this.x += dx * 0.02;
+                    this.y += dy * 0.02;
+                    this.walkCycle += 0.2;
+                } else {
+                    this.moving = false;
+                    this.walkCycle = 0;
+                }
+            }
+        }
+        draw() {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+
+            const swing = this.moving ? Math.sin(this.walkCycle) * 0.1 : 0;
+            const bounce = this.moving ? Math.abs(Math.sin(this.walkCycle * 2)) * 5 : 0;
+            ctx.rotate(swing);
+            ctx.translate(0, -bounce);
+
+            ctx.drawImage(this.img, -this.size/2, -this.size/2, this.size, this.size);
+
+            ctx.restore();
+        }
+    }
+
+    const animals = [];
+
+    animalsRef.on('child_added', snapshot => {
+        const data = snapshot.val();
+        const animal = new Animal(data);
+        animals.push(animal);
+        document.getElementById('count').textContent = animals.length;
+    });
+
+    function animate() {
+        drawBackground();
+        animals.forEach(a => { a.update(); a.draw(); });
+        requestAnimationFrame(animate);
+    }
+    animate();
+</script>
+</body>
+</html>
