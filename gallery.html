@@ -62,14 +62,14 @@
 
     const groundY = () => height * 0.6;
 
-    // 判断是否在陆地区域（森林 + 草地）
-    function isInLandArea(x, y) {
-        if (y <= groundY()) return true; // 森林区域
+    // 判断是否在左下草地三角
+    function isInGrassArea(x, y) {
+        if (y <= groundY()) return false;
         const diagY = groundY() + (height - groundY()) * (1 - x / width);
-        return y > diagY; // 草地区域
+        return y > diagY;
     }
 
-    // 判断是否在水域（池塘）
+    // 判断是否在右上池塘三角
     function isInWaterArea(x, y) {
         if (y <= groundY()) return false;
         const diagY = groundY() + (height - groundY()) * (1 - x / width);
@@ -78,28 +78,28 @@
 
     // 随机生成陆地区域点（森林 + 草地）
     function randomLandPoint() {
-        if (Math.random() < 0.4) {
-            // 40% 概率在森林
+        if (Math.random() < 0.35) {
+            // 35% 森林
             return {
                 x: Math.random() * width,
                 y: height * 0.3 + Math.random() * (groundY() - height * 0.3)
             };
         } else {
-            // 60% 概率在草地
+            // 65% 草地三角
             let x, y;
             do {
-                x = Math.random() * width * 0.7;
+                x = Math.random() * width;
                 y = groundY() + Math.random() * (height - groundY());
-            } while (!isInLandArea(x, y));
+            } while (!isInGrassArea(x, y));
             return {x, y};
         }
     }
 
-    // 随机生成水域点
+    // 随机生成池塘点（右上三角）
     function randomWaterPoint() {
         let x, y;
         do {
-            x = width * 0.3 + Math.random() * width * 0.7;
+            x = Math.random() * width;
             y = groundY() + Math.random() * (height - groundY());
         } while (!isInWaterArea(x, y));
         return {x, y};
@@ -164,10 +164,10 @@
         bgCtx.lineWidth = 2;
         for (let i = 0; i < width; i += 18) {
             const diagY = gy + (height - gy) * (1 - i / width);
-            for (let j = 0; j < 12; j++) {
+            for (let j = 0; j < 10; j++) {
                 const x = i + Math.random() * 12;
                 const y = diagY + Math.random() * (height - diagY);
-                if (isInLandArea(x, y) && y > gy) {
+                if (isInGrassArea(x, y)) {
                     bgCtx.beginPath();
                     bgCtx.moveTo(x, y);
                     bgCtx.lineTo(x + 5, y - 10);
@@ -193,21 +193,21 @@
             this.nextMoveTime = Date.now() + Math.random() * 10000 + 5000;
         }
         initPosition() {
+            let point;
             switch(this.type) {
                 case 'bird':
-                    this.x = Math.random() * width;
-                    this.y = height * 0.1 + Math.random() * height * 0.3;
+                    point = { x: Math.random() * width, y: height * 0.1 + Math.random() * height * 0.3 };
                     break;
                 case 'aquatic':
-                    const wp = randomWaterPoint();
-                    this.x = wp.x; this.y = wp.y;
+                    point = randomWaterPoint();
                     break;
                 case 'insect':
                 case 'land':
-                    const lp = randomLandPoint();
-                    this.x = lp.x; this.y = lp.y;
+                    point = randomLandPoint();
                     break;
             }
+            this.x = point.x;
+            this.y = point.y;
             this.targetX = this.x;
             this.targetY = this.y;
         }
@@ -215,22 +215,23 @@
             const now = Date.now();
             if (!this.moving && now > this.nextMoveTime) {
                 this.moving = true;
+Th;
                 this.nextMoveTime = now + Math.random() * 12000 + 8000;
+                let point;
                 switch(this.type) {
                     case 'bird':
-                        this.targetX = Math.random() * width;
-                        this.targetY = height * 0.1 + Math.random() * height * 0.3;
+                        point = { x: Math.random() * width, y: height * 0.1 + Math.random() * height * 0.3 };
                         break;
                     case 'aquatic':
-                        const wp = randomWaterPoint();
-                        this.targetX = wp.x; this.targetY = wp.y;
+                        point = randomWaterPoint();
                         break;
                     case 'insect':
                     case 'land':
-                        const lp = randomLandPoint();
-                        this.targetX = lp.x; this.targetY = lp.y;
+                        point = randomLandPoint();
                         break;
                 }
+                this.targetX = point.x;
+                this.targetY = point.y;
             }
             if (this.moving) {
                 const dx = this.targetX - this.x;
