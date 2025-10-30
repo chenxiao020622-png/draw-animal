@@ -32,7 +32,7 @@
     const firebaseConfig = {
       apiKey: "AIzaSyBQcpM36FHCAsoCJuKx3V9Vy_u6u-F_oDw",
       authDomain: "draw-a-person-e9191.firebaseapp.com",
-      databaseURL: "https://draw-a-person-e9191-default-rtdb.asia-southeast1.firebaseddatabase.app",
+      databaseURL: "https://draw-a-person-e9191-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "draw-a-person-e9191",
       storageBucket: "draw-a-person-e9191.firebasestorage.app",
       messagingSenderId: "1051515571241",
@@ -55,46 +55,63 @@
         height = canvas.height = window.innerHeight;
         bgCanvas.width = width;
         bgCanvas.height = height;
-        bgDrawn = false; // 尺寸变了，重绘背景
+        bgDrawn = false;
     }
     resize();
     window.addEventListener('resize', resize);
 
-    // 只画一次背景
     function drawBackground() {
         if (bgDrawn) {
             ctx.drawImage(bgCanvas, 0, 0);
             return;
         }
 
-        // 蓝天渐变
-        const grad = bgCtx.createLinearGradient(0, 0, 0, height);
-        grad.addColorStop(0, '#87CEEB');
-        grad.addColorStop(1, '#98D8C8');
-        bgCtx.fillStyle = grad;
-        bgCtx.fillRect(0, 0, width, height);
+        // 天空渐变
+        const skyGrad = bgCtx.createLinearGradient(0, 0, 0, height * 0.6);
+        skyGrad.addColorStop(0, '#87CEEB');
+        skyGrad.addColorStop(1, '#B3E5FC');
+        bgCtx.fillStyle = skyGrad;
+        bgCtx.fillRect(0, 0, width, height * 0.6);
 
-        // 草原
+        // 真实草地
         bgCtx.fillStyle = '#7CB342';
         bgCtx.fillRect(0, height * 0.6, width, height * 0.4);
-
-        // 森林（固定位置）
-        bgCtx.fillStyle = '#2E7D32';
-        const trees = [];
-        for (let i = 0; i < 20; i++) {
-            const x = (width / 21) * i + Math.random() * 30;
-            const h = 100 + Math.random() * 150;
-            trees.push({x, h});
-            bgCtx.fillRect(x, height * 0.6 - h, 80, h);
+        bgCtx.strokeStyle = '#66BB6A';
+        bgCtx.lineWidth = 2;
+        for (let i = 0; i < width; i += 15) {
+            const h = Math.sin(i * 0.02) * 8 + 8;
+            bgCtx.beginPath();
+            bgCtx.moveTo(i, height * 0.6 + h);
+            bgCtx.lineTo(i + 10, height * 0.6 + h - 15);
+            bgCtx.stroke();
         }
 
-        // 飞鸟（固定位置）
-        bgCtx.fillStyle = '#000';
-        bgCtx.font = '20px serif';
-        const birds = ['Eagle', 'Eagle', 'Eagle', 'Eagle', 'Eagle'];
-        birds.forEach((bird, i) => {
-            bgCtx.fillText(bird, (width / 6) * (i + 1), height * 0.2 + Math.random() * 50);
-        });
+        // 真实树木
+        for (let i = 0; i < 18; i++) {
+            const x = (width / 19) * i + 50;
+            const trunkH = 60 + Math.random() * 40;
+            const crownW = 80 + Math.random() * 40;
+            const crownH = 70 + Math.random() * 50;
+
+            // 树干
+            bgCtx.fillStyle = '#5D4037';
+            bgCtx.fillRect(x - 10, height * 0.6 - trunkH, 20, trunkH);
+
+            // 树冠
+            bgCtx.beginPath();
+            bgCtx.moveTo(x, height * 0.6 - trunkH - crownH * 0.7);
+            bgCtx.lineTo(x - crownW / 2, height * 0.6 - trunkH);
+            bgCtx.lineTo(x + crownW / 2, height * 0.6 - trunkH);
+            bgCtx.closePath();
+            bgCtx.fillStyle = '#2E7D32';
+            bgCtx.fill();
+        }
+
+        // 池塘（水族动物区）
+        bgCtx.fillStyle = '#81D4FA';
+        bgCtx.beginPath();
+        bgCtx.ellipse(width * 0.5, height * 0.85, width * 0.35, height * 0.1, 0, 0, Math.PI * 2);
+        bgCtx.fill();
 
         bgDrawn = true;
         ctx.drawImage(bgCanvas, 0, 0);
@@ -105,22 +122,56 @@
             this.id = data.id;
             this.img = new Image();
             this.img.src = data.image;
-            this.x = Math.random() * (width - 200) + 100;
-            this.y = height * 0.7 + Math.random() * (height * 0.2);
-            this.size = 80 + Math.random() * 80;
-            this.targetX = this.x;
-            this.targetY = this.y;
+            this.type = data.type || 'land';
+            this.size = this.type === 'insect' ? 30 + Math.random() * 30 : 80 + Math.random() * 80;
+            this.initPosition();
+            this.walkCycle = 0;
             this.moving = false;
             this.nextMoveTime = Date.now() + Math.random() * 10000 + 5000;
-            this.walkCycle = 0;
+        }
+        initPosition() {
+            switch(this.type) {
+                case 'bird':
+                    this.x = Math.random() * width;
+                    this.y = height * 0.1 + Math.random() * height * 0.3;
+                    break;
+                case 'aquatic':
+                    this.x = width * 0.3 + Math.random() * width * 0.4;
+                    this.y = height * 0.75 + Math.random() * height * 0.15;
+                    break;
+                case 'insect':
+                    this.x = Math.random() * width;
+                    this.y = height * 0.6 + Math.random() * height * 0.1;
+                    break;
+                default: // land
+                    this.x = Math.random() * (width - 200) + 100;
+                    this.y = height * 0.7 + Math.random() * height * 0.2;
+            }
+            this.targetX = this.x;
+            this.targetY = this.y;
         }
         update() {
             const now = Date.now();
             if (!this.moving && now > this.nextMoveTime) {
-                this.targetX = Math.random() * (width - 200) + 100;
-                this.targetY = height * 0.7 + Math.random() * (height * 0.2);
                 this.moving = true;
-                this.nextMoveTime = now + Math.random() * 15000 + 10000;
+                this.nextMoveTime = now + Math.random() * 12000 + 8000;
+                switch(this.type) {
+                    case 'bird':
+                        this.targetX = Math.random() * width;
+                        this.targetY = height * 0.1 + Math.random() * height * 0.3;
+                        break;
+                    case 'aquatic':
+                        this.targetX = width * 0.3 + Math.random() * width * 0.4;
+                        this.targetY = height * 0.75 + Math.random() * height * 0.15;
+                        break;
+                    case 'insect':
+                        this.targetX = Math.random() * width;
+                        this.targetY = height * 0.6 + Math.random() * height * 0.1;
+                        break;
+                    default:
+                        this.targetX = Math.random() * (width - 200) + 100;
+                        this.targetY = height * 0.7 + Math.random() * height * 0.2;
+                }
             }
             if (this.moving) {
                 const dx = this.targetX - this.x;
@@ -140,13 +191,21 @@
             ctx.save();
             ctx.translate(this.x, this.y);
 
-            const swing = this.moving ? Math.sin(this.walkCycle) * 0.1 : 0;
-            const bounce = this.moving ? Math.abs(Math.sin(this.walkCycle * 2)) * 5 : 0;
+            let swing = 0, bounce = 0;
+            if (this.moving) {
+                swing = Math.sin(this.walkCycle) * 0.1;
+                bounce = Math.abs(Math.sin(this.walkCycle * 2)) * 5;
+            }
+            if (this.type === 'bird') {
+                bounce = Math.sin(this.walkCycle * 3) * 8;
+                swing = Math.sin(this.walkCycle * 2) * 0.15;
+            } else if (this.type === 'aquatic') {
+                bounce = Math.sin(this.walkCycle) * 3;
+            }
             ctx.rotate(swing);
             ctx.translate(0, -bounce);
 
             ctx.drawImage(this.img, -this.size/2, -this.size/2, this.size, this.size);
-
             ctx.restore();
         }
     }
@@ -161,7 +220,7 @@
     });
 
     function animate() {
-        drawBackground(); // 背景不闪
+        drawBackground();
         animals.forEach(a => { a.update(); a.draw(); });
         requestAnimationFrame(animate);
     }
