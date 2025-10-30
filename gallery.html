@@ -32,7 +32,7 @@
     const firebaseConfig = {
       apiKey: "AIzaSyBQcpM36FHCAsoCJuKx3V9Vy_u6u-F_oDw",
       authDomain: "draw-a-person-e9191.firebaseapp.com",
-      databaseURL: "https://draw-a-person-e9191-default-rtdb.asia-southeast1.firebasedatabase.app",
+      databaseURL: "https://draw-a-person-e9191-default-rtdb.asia-southeast1.firebaseddatabase.app",
       projectId: "draw-a-person-e9191",
       storageBucket: "draw-a-person-e9191.firebasestorage.app",
       messagingSenderId: "1051515571241",
@@ -46,32 +46,58 @@
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     let width, height;
-    function resize() { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; }
+    const bgCanvas = document.createElement('canvas');
+    const bgCtx = bgCanvas.getContext('2d');
+    let bgDrawn = false;
+
+    function resize() { 
+        width = canvas.width = window.innerWidth; 
+        height = canvas.height = window.innerHeight;
+        bgCanvas.width = width;
+        bgCanvas.height = height;
+        bgDrawn = false; // 尺寸变了，重绘背景
+    }
     resize();
     window.addEventListener('resize', resize);
 
+    // 只画一次背景
     function drawBackground() {
-        const grad = ctx.createLinearGradient(0, 0, 0, height);
+        if (bgDrawn) {
+            ctx.drawImage(bgCanvas, 0, 0);
+            return;
+        }
+
+        // 蓝天渐变
+        const grad = bgCtx.createLinearGradient(0, 0, 0, height);
         grad.addColorStop(0, '#87CEEB');
         grad.addColorStop(1, '#98D8C8');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, width, height);
+        bgCtx.fillStyle = grad;
+        bgCtx.fillRect(0, 0, width, height);
 
-        ctx.fillStyle = '#7CB342';
-        ctx.fillRect(0, height * 0.6, width, height * 0.4);
+        // 草原
+        bgCtx.fillStyle = '#7CB342';
+        bgCtx.fillRect(0, height * 0.6, width, height * 0.4);
 
-        ctx.fillStyle = '#2E7D32';
+        // 森林（固定位置）
+        bgCtx.fillStyle = '#2E7D32';
+        const trees = [];
         for (let i = 0; i < 20; i++) {
-            const x = Math.random() * width;
+            const x = (width / 21) * i + Math.random() * 30;
             const h = 100 + Math.random() * 150;
-            ctx.fillRect(x, height * 0.6 - h, 80, h);
+            trees.push({x, h});
+            bgCtx.fillRect(x, height * 0.6 - h, 80, h);
         }
 
-        ctx.fillStyle = '#000';
-        ctx.font = '20px serif';
-        for (let i = 0; i < 5; i++) {
-            ctx.fillText('Eagle', Math.random() * width, Math.random() * height * 0.3);
-        }
+        // 飞鸟（固定位置）
+        bgCtx.fillStyle = '#000';
+        bgCtx.font = '20px serif';
+        const birds = ['Eagle', 'Eagle', 'Eagle', 'Eagle', 'Eagle'];
+        birds.forEach((bird, i) => {
+            bgCtx.fillText(bird, (width / 6) * (i + 1), height * 0.2 + Math.random() * 50);
+        });
+
+        bgDrawn = true;
+        ctx.drawImage(bgCanvas, 0, 0);
     }
 
     class Animal {
@@ -135,7 +161,7 @@
     });
 
     function animate() {
-        drawBackground();
+        drawBackground(); // 背景不闪
         animals.forEach(a => { a.update(); a.draw(); });
         requestAnimationFrame(animate);
     }
