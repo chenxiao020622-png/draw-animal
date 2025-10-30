@@ -30,9 +30,9 @@
 
 <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyBQcpM36FHCAsoCJuKx3V9Vy_u-F_oDw",
+      apiKey: "AIzaSyBQcpM36FHCAsoCJuKx3V9Vy_u6u-F_oDw",
       authDomain: "draw-a-person-e9191.firebaseapp.com",
-      databaseURL: "https://draw-a-person-e9191-default-rtdb.asia-southeast1.firebaseddatabase.app",
+      databaseURL: "https://draw-a-person-e9191-default-rtdb.asia-southeast1.firebasedatabase.app",
       projectId: "draw-a-person-e9191",
       storageBucket: "draw-a-person-e9191.firebasestorage.app",
       messagingSenderId: "1051515571241",
@@ -60,12 +60,6 @@
     resize();
     window.addEventListener('resize', resize);
 
-    // 判断点是否在左下三角形内（草地区域）
-    function isInGrassArea(x, y, groundY) {
-        const diagY = groundY + (height - groundY) * (1 - x / width);
-        return y > diagY;
-    }
-
     function drawBackground() {
         if (bgDrawn) {
             ctx.drawImage(bgCanvas, 0, 0);
@@ -74,22 +68,38 @@
 
         const groundY = height * 0.6;
 
-        // 天空渐变（不变）
+        // 1. 天空渐变
         const skyGrad = bgCtx.createLinearGradient(0, 0, 0, groundY);
         skyGrad.addColorStop(0, '#87CEEB');
         skyGrad.addColorStop(1, '#B3E5FC');
         bgCtx.fillStyle = skyGrad;
         bgCtx.fillRect(0, 0, width, groundY);
 
-        // 森林背景（在草地上方，不变）
-        bgCtx.fillStyle = '#2E7D32';
+        // 2. 森林（真实树木，只在上半部）
         for (let i = 0; i < 18; i++) {
-            const x = (width / 19) * i + 50;
-            const h = 100 + Math.random() * 100;
-            bgCtx.fillRect(x, groundY - h, 80, h);
+            const x = (width / 19) * i + 40 + Math.random() * 20;
+            const trunkH = 80 + Math.random() * 60;
+            const crownW = 80 + Math.random() * 40;
+            const crownH = 70 + Math.random() * 50;
+
+            const trunkTopY = groundY - trunkH;
+            if (trunkTopY < 0) continue;
+
+            // 树干
+            bgCtx.fillStyle = '#5D4037';
+            bgCtx.fillRect(x - 12, trunkTopY, 24, trunkH);
+
+            // 树冠
+            bgCtx.beginPath();
+            bgCtx.moveTo(x, trunkTopY - crownH * 0.7);
+            bgCtx.lineTo(x - crownW / 2, trunkTopY);
+            bgCtx.lineTo(x + crownW / 2, trunkTopY);
+            bgCtx.closePath();
+            bgCtx.fillStyle = '#2E7D32';
+            bgCtx.fill();
         }
 
-        // 右上 → 左下 对角线分割
+        // 3. 下半部：右上 → 左下 对角线分割
         // 左下三角形：草地
         bgCtx.fillStyle = '#7CB342';
         bgCtx.beginPath();
@@ -108,51 +118,33 @@
         bgCtx.closePath();
         bgCtx.fill();
 
-        // 草地纹理（只在左下三角）
+        // 4. 草地纹理（只在左下三角）
         bgCtx.strokeStyle = '#66BB6A';
         bgCtx.lineWidth = 2;
-        for (let i = 0; i < width; i += 15) {
-            for (let j = 0; j < height - groundY; j += 20) {
-                const x = i + Math.random() * 10;
-                const y = groundY + j + Math.random() * 10;
-                if (isInGrassArea(x, y, groundY)) {
-                    const h = 8 + Math.random() * 8;
+        for (let i = 0; i < width; i += 18) {
+            const diagY = groundY + (height - groundY) * (1 - i / width);
+            for (let j = 0; j < 15; j++) {
+                const x = i + Math.random() * 12;
+                const y = diagY + Math.random() * (height - diagY);
+                if (y > groundY) {
                     bgCtx.beginPath();
                     bgCtx.moveTo(x, y);
-                    bgCtx.lineTo(x + 5, y - h);
+                    bgCtx.lineTo(x + 5, y - 10);
                     bgCtx.stroke();
                 }
             }
         }
 
-        // 树木（只在草地左下三角）
-        for (let i = 0; i < 12; i++) {
-            const x = width * 0.1 + Math.random() * width * 0.5;
-            const diagY = groundY + (height - groundY) * (1 - x / width);
-            const baseY = diagY + Math.random() * (height - diagY);
-            if (baseY < groundY) continue;
-
-            const trunkH = 50 + Math.random() * 40;
-            const crownW = 60 + Math.random() * 40;
-            const crownH = 50 + Math.random() * 40;
-            const trunkTopY = baseY - trunkH;
-
-            if (trunkTopY < groundY) continue;
-
-            bgCtx.fillStyle = '#5D4037';
-            bgCtx.fillRect(x - 10, trunkTopY, 20, trunkH);
-
-            bgCtx.beginPath();
-            bgCtx.moveTo(x, trunkTopY - crownH * 0.7);
-            bgCtx.lineTo(x - crownW / 2, trunkTopY);
-            bgCtx.lineTo(x + crownW / 2, trunkTopY);
-            bgCtx.closePath();
-            bgCtx.fillStyle = '#2E7D32';
-            bgCtx.fill();
-        }
-
         bgDrawn = true;
         ctx.drawImage(bgCanvas, 0, 0);
+    }
+
+    // 判断是否在草地区域（左下三角）
+    function isInGrassArea(x, y) {
+        const groundY = height * 0.6;
+        if (y <= groundY) return false;
+        const diagY = groundY + (height - groundY) * (1 - x / width);
+        return y > diagY;
     }
 
     class Animal {
@@ -175,17 +167,18 @@
                     this.y = height * 0.1 + Math.random() * height * 0.3;
                     break;
                 case 'aquatic':
-                    const diagY = groundY + (height - groundY) * (1 - Math.random());
-                    this.x = width * 0.5 + Math.random() * width * 0.5;
-                    this.y = Math.max(groundY, diagY + Math.random() * (height - diagY));
+                    do {
+                        this.x = width * 0.4 + Math.random() * width * 0.6;
+                        this.y = groundY + Math.random() * (height - groundY);
+                    } while (isInGrassArea(this.x, this.y));
                     break;
                 case 'insect':
-                    this.x = Math.random() * width * 0.6;
-                    this.y = groundY + Math.random() * (height - groundY) * 0.6;
+                case 'land':
+                    do {
+                        this.x = Math.random() * width * 0.7;
+                        this.y = groundY + Math.random() * (height - groundY);
+                    } while (!isInGrassArea(this.x, this.y));
                     break;
-                default: // land
-                    this.x = Math.random() * width * 0.6;
-                    this.y = groundY + Math.random() * (height - groundY);
             }
             this.targetX = this.x;
             this.targetY = this.y;
@@ -202,16 +195,18 @@
                         this.targetY = height * 0.1 + Math.random() * height * 0.3;
                         break;
                     case 'aquatic':
-                        this.targetX = width * 0.5 + Math.random() * width * 0.5;
-                        this.targetY = groundY + Math.random() * (height - groundY);
+                        do {
+                            this.targetX = width * 0.4 + Math.random() * width * 0.6;
+                            this.targetY = groundY + Math.random() * (height - groundY);
+                        } while (isInGrassArea(this.targetX, this.targetY));
                         break;
                     case 'insect':
-                        this.targetX = Math.random() * width * 0.6;
-                        this.targetY = groundY + Math.random() * (height - groundY) * 0.6;
+                    case 'land':
+                        do {
+                            this.targetX = Math.random() * width * 0.7;
+                            this.targetY = groundY + Math.random() * (height - groundY);
+                        } while (!isInGrassArea(this.targetX, this.targetY));
                         break;
-                    default:
-                        this.targetX = Math.random() * width * 0.6;
-                        this.targetY = groundY + Math.random() * (height - groundY);
                 }
             }
             if (this.moving) {
