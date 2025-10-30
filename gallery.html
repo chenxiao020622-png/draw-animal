@@ -30,7 +30,7 @@
 
 <script>
     const firebaseConfig = {
-      apiKey: "AIzaSyBQcpM36FHCAsoCJuKx3V9Vy_u6u-F_oDw",
+      apiKey: "AIzaSyBQcpM36FHCAsoCJuKx3V9Vy_u-F_oDw",
       authDomain: "draw-a-person-e9191.firebaseapp.com",
       databaseURL: "https://draw-a-person-e9191-default-rtdb.asia-southeast1.firebaseddatabase.app",
       projectId: "draw-a-person-e9191",
@@ -60,6 +60,12 @@
     resize();
     window.addEventListener('resize', resize);
 
+    // 判断点是否在左下三角形内（草地区域）
+    function isInGrassArea(x, y, groundY) {
+        const diagY = groundY + (height - groundY) * (1 - x / width);
+        return y > diagY;
+    }
+
     function drawBackground() {
         if (bgDrawn) {
             ctx.drawImage(bgCanvas, 0, 0);
@@ -67,7 +73,6 @@
         }
 
         const groundY = height * 0.6;
-        const waterSplitX = width * 0.5; // 水平分割线
 
         // 天空渐变（不变）
         const skyGrad = bgCtx.createLinearGradient(0, 0, 0, groundY);
@@ -84,39 +89,63 @@
             bgCtx.fillRect(x, groundY - h, 80, h);
         }
 
-        // 草地区域（左半部分）
+        // 右上 → 左下 对角线分割
+        // 左下三角形：草地
         bgCtx.fillStyle = '#7CB342';
-        bgCtx.fillRect(0, groundY, waterSplitX, height - groundY);
+        bgCtx.beginPath();
+        bgCtx.moveTo(0, height);
+        bgCtx.lineTo(width, groundY);
+        bgCtx.lineTo(0, groundY);
+        bgCtx.closePath();
+        bgCtx.fill();
 
-        // 池塘区域（右半部分）
+        // 右上三角形：池塘
         bgCtx.fillStyle = '#81D4FA';
-        bgCtx.fillRect(waterSplitX, groundY, width - waterSplitX, height - groundY);
+        bgCtx.beginPath();
+        bgCtx.moveTo(width, groundY);
+        bgCtx.lineTo(width, height);
+        bgCtx.lineTo(0, height);
+        bgCtx.closePath();
+        bgCtx.fill();
 
-        // 草地纹理（只在左边）
+        // 草地纹理（只在左下三角）
         bgCtx.strokeStyle = '#66BB6A';
         bgCtx.lineWidth = 2;
-        for (let i = 0; i < waterSplitX; i += 15) {
-            const h = Math.sin(i * 0.02) * 8 + 8;
-            bgCtx.beginPath();
-            bgCtx.moveTo(i, groundY + h);
-            bgCtx.lineTo(i + 10, groundY + h - 15);
-            bgCtx.stroke();
+        for (let i = 0; i < width; i += 15) {
+            for (let j = 0; j < height - groundY; j += 20) {
+                const x = i + Math.random() * 10;
+                const y = groundY + j + Math.random() * 10;
+                if (isInGrassArea(x, y, groundY)) {
+                    const h = 8 + Math.random() * 8;
+                    bgCtx.beginPath();
+                    bgCtx.moveTo(x, y);
+                    bgCtx.lineTo(x + 5, y - h);
+                    bgCtx.stroke();
+                }
+            }
         }
 
-        // 树木（只在草地左边）
-        for (let i = 0; i < 9; i++) {
-            const x = (waterSplitX / 10) * i + 40;
-            const trunkH = 60 + Math.random() * 40;
-            const crownW = 70 + Math.random() * 30;
-            const crownH = 60 + Math.random() * 40;
+        // 树木（只在草地左下三角）
+        for (let i = 0; i < 12; i++) {
+            const x = width * 0.1 + Math.random() * width * 0.5;
+            const diagY = groundY + (height - groundY) * (1 - x / width);
+            const baseY = diagY + Math.random() * (height - diagY);
+            if (baseY < groundY) continue;
+
+            const trunkH = 50 + Math.random() * 40;
+            const crownW = 60 + Math.random() * 40;
+            const crownH = 50 + Math.random() * 40;
+            const trunkTopY = baseY - trunkH;
+
+            if (trunkTopY < groundY) continue;
 
             bgCtx.fillStyle = '#5D4037';
-            bgCtx.fillRect(x - 10, groundY - trunkH, 20, trunkH);
+            bgCtx.fillRect(x - 10, trunkTopY, 20, trunkH);
 
             bgCtx.beginPath();
-            bgCtx.moveTo(x, groundY - trunkH - crownH * 0.7);
-            bgCtx.lineTo(x - crownW / 2, groundY - trunkH);
-            bgCtx.lineTo(x + crownW / 2, groundY - trunkH);
+            bgCtx.moveTo(x, trunkTopY - crownH * 0.7);
+            bgCtx.lineTo(x - crownW / 2, trunkTopY);
+            bgCtx.lineTo(x + crownW / 2, trunkTopY);
             bgCtx.closePath();
             bgCtx.fillStyle = '#2E7D32';
             bgCtx.fill();
@@ -140,22 +169,22 @@
         }
         initPosition() {
             const groundY = height * 0.6;
-            const waterSplitX = width * 0.5;
             switch(this.type) {
                 case 'bird':
                     this.x = Math.random() * width;
                     this.y = height * 0.1 + Math.random() * height * 0.3;
                     break;
                 case 'aquatic':
-                    this.x = waterSplitX + Math.random() * (width - waterSplitX);
-                    this.y = groundY + Math.random() * (height - groundY);
+                    const diagY = groundY + (height - groundY) * (1 - Math.random());
+                    this.x = width * 0.5 + Math.random() * width * 0.5;
+                    this.y = Math.max(groundY, diagY + Math.random() * (height - diagY));
                     break;
                 case 'insect':
-                    this.x = Math.random() * waterSplitX;
-                    this.y = groundY + Math.random() * (height - groundY) * 0.5;
+                    this.x = Math.random() * width * 0.6;
+                    this.y = groundY + Math.random() * (height - groundY) * 0.6;
                     break;
                 default: // land
-                    this.x = Math.random() * waterSplitX;
+                    this.x = Math.random() * width * 0.6;
                     this.y = groundY + Math.random() * (height - groundY);
             }
             this.targetX = this.x;
@@ -167,22 +196,21 @@
                 this.moving = true;
                 this.nextMoveTime = now + Math.random() * 12000 + 8000;
                 const groundY = height * 0.6;
-                const waterSplitX = width * 0.5;
                 switch(this.type) {
                     case 'bird':
                         this.targetX = Math.random() * width;
                         this.targetY = height * 0.1 + Math.random() * height * 0.3;
                         break;
                     case 'aquatic':
-                        this.targetX = waterSplitX + Math.random() * (width - waterSplitX);
+                        this.targetX = width * 0.5 + Math.random() * width * 0.5;
                         this.targetY = groundY + Math.random() * (height - groundY);
                         break;
                     case 'insect':
-                        this.targetX = Math.random() * waterSplitX;
-                        this.targetY = groundY + Math.random() * (height - groundY) * 0.5;
+                        this.targetX = Math.random() * width * 0.6;
+                        this.targetY = groundY + Math.random() * (height - groundY) * 0.6;
                         break;
                     default:
-                        this.targetX = Math.random() * waterSplitX;
+                        this.targetX = Math.random() * width * 0.6;
                         this.targetY = groundY + Math.random() * (height - groundY);
                 }
             }
