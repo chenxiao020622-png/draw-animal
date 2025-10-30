@@ -78,31 +78,40 @@
 
     // 随机生成陆地区域点（森林 + 草地）
     function randomLandPoint() {
-        if (Math.random() < 0.35) {
-            // 35% 森林
+        if (Math.random() < 0.4) {
             return {
                 x: Math.random() * width,
                 y: height * 0.3 + Math.random() * (groundY() - height * 0.3)
             };
         } else {
-            // 65% 草地三角
-            let x, y;
+            let x = Math.random() * width;
+            let maxY = height;
+            let minY = groundY();
+            let y;
             do {
-                x = Math.random() * width;
-                y = groundY() + Math.random() * (height - groundY());
+                y = minY + Math.random() * (maxY - minY);
             } while (!isInGrassArea(x, y));
             return {x, y};
         }
     }
 
-    // 随机生成池塘点（右上三角）
+    // 随机生成池塘点（右上三角）—— 终极安全版
     function randomWaterPoint() {
         let x, y;
-        do {
+        const attempts = 100;
+        for (let i = 0; i < attempts; i++) {
             x = Math.random() * width;
-            y = groundY() + Math.random() * (height - groundY());
-        } while (!isInWaterArea(x, y));
-        return {x, y};
+            const diagY = groundY() + (height - groundY()) * (1 - x / width);
+            y = groundY() + Math.random() * (diagY - groundY());
+            if (isInWaterArea(x, y)) {
+                return {x, y};
+            }
+        }
+        // 兜底：返回对角线中点
+        return {
+            x: width * 0.7,
+            y: groundY() + (height - groundY()) * 0.3
+        };
     }
 
     function drawBackground() {
@@ -215,7 +224,6 @@
             const now = Date.now();
             if (!this.moving && now > this.nextMoveTime) {
                 this.moving = true;
-Th;
                 this.nextMoveTime = now + Math.random() * 12000 + 8000;
                 let point;
                 switch(this.type) {
